@@ -1,47 +1,96 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'gemini_service.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-class MatchView extends StatelessWidget {
-  final String itemId;
-  MatchView(this.itemId);
+class MatchView extends StatefulWidget {
+  final DocumentSnapshot item;
+  MatchView(this.item);
+
+  @override
+  _MatchViewState createState() => _MatchViewState();
+}
+
+class _MatchViewState extends State<MatchView> {
+  bool loading = true;
+  List matches = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchMatches();
+  }
+
+  Future<void> fetchMatches() async {
+    try {
+      final oppositeType =
+          widget.item["type"] == "lost" ? "found" : "lost";
+
+      final snap = await FirebaseFirestore.instance
+          .collection("items")
+          .where("type", isEqualTo: oppositeType)
+          .where("active", isEqualTo: true)
+          .get();
+
+      matches.clear();
+
+      for (var d in snap.docs) {
+        final result = await match(
+          widget.item["description"],
+          d["description"],
+        );
+
+        final score = result["similarity_score"];
+
+        // 👉 ONLY HIGH CONFIDENCE MATCHES
+        if (score >= 0.6) {
+          matches.add({
+            "item": d,
+            "score": score,
+            "reason": result["reasoning"]
+          });
+        }
+      }
+    } catch (e) {
+      print("MATCH ERROR: $e");
+    }
+
+    if (mounted) {
+      setState(() {
+        loading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Matches")),
-      body: StreamBuilder(
-        stream: FirebaseFirestore.instance.collection("items").snapshots(),
-        builder: (c, s) {
-          if (!s.hasData) return Center(child: CircularProgressIndicator());
-
-          final docs = s.data!.docs;
-
-          return ListView(
-            children: docs.map((d) {
-              return FutureBuilder(
-                future: match("dummy", d["description"]),
-                builder: (c, snap) {
-                  if (!snap.hasData) return SizedBox();
-
-                  final m = snap.data!;
-                  if (m["similarity_score"] < 0.6) return SizedBox();
-
-                  return Card(
-                    child: ListTile(
-                      title: Text(d["title"]),
-                      subtitle: Text(m["reasoning"]),
-                      trailing: Text("${(m["similarity_score"]*100).toInt()}%"),
-                      onTap: () => launchUrl(Uri.parse("mailto:${d["email"]}")),
-                    ),
-                  );
-                },
-              );
-            }).toList(),
-          );
-        },
-      ),
+      appBar: AppBar(title: Text("High Confidence Matches")),
+      body: loading
+          ? Center(child: CircularProgressIndicator())
+          : matches.isEmpty
+              ? Center(child: Text("No high confidence matches found"))
+              : ListView(
+                  children: matches.map((m) {
+                    return Card(
+                      child: ListTile(
+                        title: Text(m["item"]["title"]),
+                        subtitle: Text(m["reason"]),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text("${(m["score"] * 100).toInt()}%"),
+                            Text(
+                              "High",
+                              style: TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold),
+                            )
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
     );
   }
 }

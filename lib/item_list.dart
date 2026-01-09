@@ -8,34 +8,56 @@ class ItemList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: FirebaseFirestore.instance
-          .collection("items")
-          .where("type", isEqualTo: type)
-          .where("active", isEqualTo: true)
-          .orderBy("createdAt", descending: true)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+return StreamBuilder<QuerySnapshot>(
+  stream: FirebaseFirestore.instance
+      .collection("items")
+      .where("type", isEqualTo: type)
+      .where("active", isEqualTo: true)
+      .orderBy("createdAt", descending: true)
+      .snapshots(),
+  builder: (context, snapshot) {
 
-        final docs = snapshot.data!.docs;
+    // Still connecting
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return Center(child: CircularProgressIndicator());
+    }
 
-        return ListView.builder(
-          itemCount: docs.length,
-          itemBuilder: (c, i) {
-            final d = docs[i];
-            return Card(
-              child: ListTile(
-                title: Text(d["title"]),
-                subtitle: Text(d["description"]),
-                trailing: Text(d["location"]),
-                onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => MatchView(d.id))),
-              ),
-            );
-          },
+    // Error case
+  //   if (snapshot.hasError) {
+  // return Center(child: Text(snapshot.error.toString()));
+  //   }
+    if (snapshot.hasError) {
+      return Center(child: Text("Error loading items"));
+}
+
+    final docs = snapshot.data!.docs;
+
+    if (docs.isEmpty) {
+      return Center(child: Text("No items found"));
+    }
+
+    return ListView.builder(
+      itemCount: docs.length,
+      itemBuilder: (c, i) {
+        final d = docs[i];
+        return Card(
+          child: ListTile(
+            title: Text(d["title"]),
+            subtitle: Text(d["description"]),
+            trailing: Text(d["location"]),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MatchView(d),
+                  ),
+                );
+              }
+          ),
         );
       },
     );
+  },
+);
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'item_list.dart';
 import 'create_post.dart';
+import 'auth.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
