@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'cloudinary_service.dart';
 
 class CreatePost extends StatefulWidget {
   @override
@@ -8,23 +11,44 @@ class CreatePost extends StatefulWidget {
 }
 
 class _CreatePostState extends State<CreatePost> {
+  File? image;
   String type = "lost";
-  final title = TextEditingController();
-  final desc = TextEditingController();
-  final loc = TextEditingController();
 
-  void submit() async {
+  final title = TextEditingController();
+  final description = TextEditingController();
+  final location = TextEditingController();
+
+  Future pickImage() async {
+    final picked =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
+
+    if (picked != null) {
+      setState(() {
+        image = File(picked.path);
+      });
+    }
+  }
+
+  Future submit() async {
     final user = FirebaseAuth.instance.currentUser!;
+    String? imageUrl;
+
+    if (image != null) {
+      imageUrl = await uploadToCloudinary(image!);
+    }
+
     await FirebaseFirestore.instance.collection("items").add({
-      "type": type,
       "title": title.text,
-      "description": desc.text,
-      "location": loc.text,
-      "email": user.email,
+      "description": description.text,
+      "location": location.text,
+      "type": type,
+      "photoUrl": imageUrl,
       "ownerId": user.uid,
+      "email": user.email,
       "active": true,
-      "createdAt": FieldValue.serverTimestamp()
+      "createdAt": FieldValue.serverTimestamp(),
     });
+
     Navigator.pop(context);
   }
 
@@ -34,21 +58,39 @@ class _CreatePostState extends State<CreatePost> {
       appBar: AppBar(title: Text("Create Post")),
       body: Padding(
         padding: EdgeInsets.all(16),
-        child: Column(children: [
-          DropdownButtonFormField(
-            value: type,
-            items: [
-              DropdownMenuItem(value: "lost", child: Text("Lost")),
-              DropdownMenuItem(value: "found", child: Text("Found")),
-            ],
-            onChanged: (v) => setState(() => type = v!),
-          ),
-          TextField(controller: title, decoration: InputDecoration(labelText: "Title")),
-          TextField(controller: desc, decoration: InputDecoration(labelText: "Description")),
-          TextField(controller: loc, decoration: InputDecoration(labelText: "Location")),
-          SizedBox(height: 20),
-          ElevatedButton(onPressed: submit, child: Text("Submit"))
-        ]),
+        child: ListView(
+          children: [
+            DropdownButton<String>(
+              value: type,
+              items: ["lost", "found"]
+                  .map((e) =>
+                      DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+              onChanged: (v) => setState(() => type = v!),
+            ),
+
+            TextField(controller: title, decoration: InputDecoration(labelText: "Title")),
+            TextField(controller: description, decoration: InputDecoration(labelText: "Description")),
+            TextField(controller: location, decoration: InputDecoration(labelText: "Location")),
+
+            SizedBox(height: 10),
+
+            image == null
+                ? TextButton.icon(
+                    icon: Icon(Icons.image),
+                    label: Text("Pick Image"),
+                    onPressed: pickImage,
+                  )
+                : Image.file(image!, height: 150),
+
+            SizedBox(height: 20),
+
+            ElevatedButton(
+              onPressed: submit,
+              child: Text("Post"),
+            )
+          ],
+        ),
       ),
     );
   }
