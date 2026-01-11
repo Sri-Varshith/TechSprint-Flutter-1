@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'match_view.dart';
+import 'details_page.dart';
 
 class ItemList extends StatelessWidget {
   final String type;
@@ -8,59 +8,70 @@ class ItemList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-return StreamBuilder<QuerySnapshot>(
-  stream: FirebaseFirestore.instance
-      .collection("items")
-      .where("type", isEqualTo: type)
-      .where("active", isEqualTo: true)
-      .orderBy("createdAt", descending: true)
-      .snapshots(),
-  builder: (context, snapshot) {
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance
+          .collection("items")
+          .where(type == "matches" ? "ownerEmail" : "type",
+              isEqualTo: type == "matches"
+                  ? FirebaseAuth.instance.currentUser!.email
+                  : type)
+          .where("active", isEqualTo: true)
+          .snapshots(),
+      builder: (_, snap) {
+        if (!snap.hasData) return Center(child: CircularProgressIndicator());
 
-    // Still connecting
-    if (snapshot.connectionState == ConnectionState.waiting) {
-      return Center(child: CircularProgressIndicator());
-    }
+        final docs = snap.data!.docs;
 
-    // Error case
-  //   if (snapshot.hasError) {
-  // return Center(child: Text(snapshot.error.toString()));
-  //   }
-    if (snapshot.hasError) {
-      return Center(child: Text("Error loading items"));
-}
+        return ListView.builder(
+          itemCount: docs.length,
+          itemBuilder: (_, i) {
+            final d = docs[i].data() as Map<String, dynamic>;
 
-    final docs = snapshot.data!.docs;
+            return Card(
+              margin: EdgeInsets.all(10),
+              child: Column(
+                children: [
+                  if (d["photoUrl"] != null)
+                    Image.network(d["photoUrl"], height: 150, fit: BoxFit.cover),
 
-    if (docs.isEmpty) {
-      return Center(child: Text("No items found"));
-    }
-
-    return ListView.builder(
-      itemCount: docs.length,
-      itemBuilder: (c, i) {
-        final d = docs[i];
-        return Card(
-          child: ListTile(
-            leading: d["photoUrl"] != null
-    ? Image.network(d["photoUrl"], width: 60, fit: BoxFit.cover)
-    : Icon(Icons.image_not_supported),
-            title: Text(d["title"]),
-            subtitle: Text(d["description"]),
-            trailing: Text(d["location"]),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => MatchView(d),
+                  ListTile(
+                    title: Text(d["title"]),
+                    subtitle: Text(d["description"]),
+                    trailing: Text(d["location"]),
                   ),
-                );
-              }
-          ),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      ElevatedButton(
+                        child: Text(type == "lost"
+                            ? "I FOUND THIS"
+                            : "THIS IS MINE"),
+                        onPressed: () => openMail(d),
+                      ),
+                      TextButton(
+                        child: Text("VIEW DETAILS"),
+                        onPressed: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => DetailsPage(doc: docs[i])));
+                        },
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            );
+          },
         );
       },
     );
-  },
-);
+  }
+
+  void openMail(Map d) async {
+    final uri = Uri.parse(
+        "mailto:${d["ownerEmail"]}?subject=Regarding your ${d["title"]}");
+    await launchUrl(uri);
   }
 }

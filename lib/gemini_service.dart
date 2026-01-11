@@ -46,9 +46,6 @@ No markdown. No backticks. No explanation.
   final text =
       raw["candidates"][0]["content"]["parts"][0]["text"];
 
-  print("RAW GEMINI RESPONSE:\n$text");
-
-  // Clean markdown formatting
   final cleaned = text
       .replaceAll("```json", "")
       .replaceAll("```", "")
