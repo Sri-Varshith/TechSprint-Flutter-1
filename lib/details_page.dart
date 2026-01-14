@@ -13,18 +13,25 @@ class DetailsPage extends StatelessWidget {
     final me = FirebaseAuth.instance.currentUser!.uid == d["ownerUid"];
 
     return Scaffold(
-      appBar: AppBar(title: Text(d["title"])),
+      appBar: AppBar(title: Text(d["title"] ?? "")),
       body: ListView(
         padding: EdgeInsets.all(16),
         children: [
           if (d["photoUrl"] != null)
-            Image.network(d["photoUrl"], height: 220, fit: BoxFit.cover),
-          SizedBox(height: 10),
-          Text(d["description"]),
-          Text("Location: ${d["location"]}"),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(d["photoUrl"], height: 220, fit: BoxFit.cover),
+            ),
+          SizedBox(height: 12),
+          Text(d["description"] ?? ""),
+          SizedBox(height: 8),
+          Row(children: [
+            Icon(Icons.location_on),
+            Text(d["location"] ?? ""),
+          ]),
           Divider(),
-          Text("Posted by: ${d["ownerName"]}"),
-          Text(d["ownerEmail"]),
+          Text("Posted by: ${d["ownerName"] ?? "Unknown"}"),
+          Text(d["ownerEmail"] ?? ""),
           Row(children: [
             IconButton(
                 icon: Icon(Icons.mail),

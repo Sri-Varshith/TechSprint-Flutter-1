@@ -30,57 +30,81 @@ class ItemList extends StatelessWidget {
 
         final docs = snap.data!.docs;
 
+        if (docs.isEmpty) {
+          return Center(child: Text("No items found"));
+        }
+
         return ListView.builder(
           itemCount: docs.length,
           itemBuilder: (_, i) {
             final d = docs[i].data() as Map<String, dynamic>;
             final photo = d["photoUrl"];
 
-            return GestureDetector(
-              onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => DetailsPage(doc: docs[i]))),
+            return AnimatedContainer(
+              duration: Duration(milliseconds: 300),
+              margin: EdgeInsets.all(12),
+              height: 160,
               child: Card(
-                margin: EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 120,
-                      height: 120,
-                      child: photo != null
-                          ? Image.network(photo, fit: BoxFit.cover)
-                          : Icon(Icons.image, size: 60),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.all(10),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(d["title"],
-                                  style:
-                                      TextStyle(fontWeight: FontWeight.bold)),
-                              SizedBox(height: 6),
-                              Text(d["description"],
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis),
-                              SizedBox(height: 6),
-                              Row(children: [
-                                Icon(Icons.location_on, size: 14),
-                                Text(d["location"]),
-                              ]),
-                              SizedBox(height: 10),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Text("View Details",
-                                    style:
-                                        TextStyle(color: Colors.blueAccent)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                child: InkWell(
+                  onTap: () {},
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 140,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.horizontal(
+                              left: Radius.circular(16)),
+                          color: Colors.grey.shade200,
+                        ),
+                        child: photo != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.horizontal(
+                                    left: Radius.circular(16)),
+                                child: Image.network(photo,
+                                    fit: BoxFit.cover),
                               )
-                            ]),
+                            : Icon(Icons.image, size: 60),
                       ),
-                    )
-                  ],
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(d["title"] ?? "",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                                SizedBox(height: 6),
+                                Text(d["description"] ?? "",
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis),
+                                Spacer(),
+                                Row(children: [
+                                  Icon(Icons.location_on, size: 14),
+                                  SizedBox(width: 4),
+                                  Expanded(
+                                      child: Text(d["location"] ?? "")),
+                                ]),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    child: Text("View Details"),
+                                    onPressed: () {
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) => DetailsPage(
+                                                  doc: docs[i])));
+                                    },
+                                  ),
+                                )
+                              ]),
+                        ),
+                      )
+                    ],
+                  ),
                 ),
               ),
             );

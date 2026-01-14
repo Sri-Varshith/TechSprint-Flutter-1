@@ -14,8 +14,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late TabController tab;
-  bool myLost = false;
-  bool myFound = false;
 
   @override
   void initState() {
@@ -30,12 +28,16 @@ class _HomeScreenState extends State<HomeScreen>
     return Scaffold(
       appBar: AppBar(
         title: Row(children: [
-          Icon(Icons.search),
-          SizedBox(width: 6),
+          CircleAvatar(
+              backgroundImage: user.photoURL != null
+                  ? NetworkImage(user.photoURL!)
+                  : null,
+              child: user.photoURL == null ? Icon(Icons.person) : null),
+          SizedBox(width: 8),
           Text("FindIt AI"),
         ]),
         actions: [
-          Icon(Icons.notifications),
+          Icon(Icons.notifications_outlined),
           SizedBox(width: 10),
         ],
         bottom: TabBar(
@@ -56,8 +58,14 @@ class _HomeScreenState extends State<HomeScreen>
           ListTile(title: Text("My Matches")),
           ListTile(title: Text("Future Improvements")),
           ListTile(
-              title: Text("Theme"),
-              trailing: Switch(value: false, onChanged: (_) => widget.onTheme())),
+            title: Row(
+              children: [
+                Text("Theme"),
+                Spacer(),
+                Switch(value: false, onChanged: (_) => widget.onTheme()),
+              ],
+            ),
+          ),
           ListTile(
               title: Text("Logout"),
               onTap: () => FirebaseAuth.instance.signOut()),
